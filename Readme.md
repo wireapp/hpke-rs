@@ -28,6 +28,7 @@ This version is compatible with draft-12, which is expected to be equivalent to 
 
 - DH KEM x25519
 - DH KEM P256
+- DH KEM P384
 
 ### AEAD
 

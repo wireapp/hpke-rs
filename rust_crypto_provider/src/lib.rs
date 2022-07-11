@@ -9,8 +9,9 @@ use hpke_rs_crypto::{
 };
 use p256::{
     elliptic_curve::{ecdh::diffie_hellman, sec1::ToEncodedPoint},
-    PublicKey, SecretKey,
+    PublicKey as P256PublicKey, SecretKey as P256SecretKey,
 };
+use p384::{PublicKey as P384PublicKey, SecretKey as P384SecretKey};
 use rand::SeedableRng;
 use x25519_dalek_ng::{PublicKey as X25519PublicKey, StaticSecret as X25519StaticSecret};
 
@@ -76,8 +77,20 @@ impl HpkeCrypto for HpkeRustCrypto {
                     .to_vec())
             }
             KemAlgorithm::DhKemP256 => {
-                let sk = SecretKey::from_be_bytes(sk).map_err(|_| Error::KemInvalidSecretKey)?;
-                let pk = PublicKey::from_sec1_bytes(pk).map_err(|_| Error::KemInvalidPublicKey)?;
+                let sk =
+                    P256SecretKey::from_be_bytes(sk).map_err(|_| Error::KemInvalidSecretKey)?;
+                let pk =
+                    P256PublicKey::from_sec1_bytes(pk).map_err(|_| Error::KemInvalidPublicKey)?;
+                Ok(diffie_hellman(sk.to_nonzero_scalar(), pk.as_affine())
+                    .raw_secret_bytes()
+                    .as_slice()
+                    .into())
+            }
+            KemAlgorithm::DhKemP384 => {
+                let sk =
+                    P384SecretKey::from_be_bytes(sk).map_err(|_| Error::KemInvalidSecretKey)?;
+                let pk =
+                    P384PublicKey::from_sec1_bytes(pk).map_err(|_| Error::KemInvalidPublicKey)?;
                 Ok(diffie_hellman(sk.to_nonzero_scalar(), pk.as_affine())
                     .raw_secret_bytes()
                     .as_slice()
@@ -99,7 +112,13 @@ impl HpkeCrypto for HpkeRustCrypto {
                 Ok(X25519PublicKey::from(&sk).as_bytes().to_vec())
             }
             KemAlgorithm::DhKemP256 => {
-                let sk = SecretKey::from_be_bytes(sk).map_err(|_| Error::KemInvalidSecretKey)?;
+                let sk =
+                    P256SecretKey::from_be_bytes(sk).map_err(|_| Error::KemInvalidSecretKey)?;
+                Ok(sk.public_key().to_encoded_point(false).as_bytes().into())
+            }
+            KemAlgorithm::DhKemP384 => {
+                let sk =
+                    P384SecretKey::from_be_bytes(sk).map_err(|_| Error::KemInvalidSecretKey)?;
                 Ok(sk.public_key().to_encoded_point(false).as_bytes().into())
             }
             _ => Err(Error::UnknownKemAlgorithm),
@@ -110,16 +129,24 @@ impl HpkeCrypto for HpkeRustCrypto {
         let mut rng = prng.rng.write().unwrap();
         match alg {
             KemAlgorithm::DhKem25519 => Ok(X25519StaticSecret::new(&mut *rng).to_bytes().to_vec()),
-            KemAlgorithm::DhKemP256 => {
-                Ok(SecretKey::random(&mut *rng).to_be_bytes().as_slice().into())
-            }
+            KemAlgorithm::DhKemP256 => Ok(P256SecretKey::random(&mut *rng)
+                .to_be_bytes()
+                .as_slice()
+                .into()),
+            KemAlgorithm::DhKemP384 => Ok(P384SecretKey::random(&mut *rng)
+                .to_be_bytes()
+                .as_slice()
+                .into()),
             _ => Err(Error::UnknownKemAlgorithm),
         }
     }
 
     fn kem_validate_sk(alg: KemAlgorithm, sk: &[u8]) -> Result<Vec<u8>, Error> {
         match alg {
-            KemAlgorithm::DhKemP256 => SecretKey::from_be_bytes(sk)
+            KemAlgorithm::DhKemP256 => P256SecretKey::from_be_bytes(sk)
+                .map_err(|_| Error::KemInvalidSecretKey)
+                .map(|_| sk.into()),
+            KemAlgorithm::DhKemP384 => P384SecretKey::from_be_bytes(sk)
                 .map_err(|_| Error::KemInvalidSecretKey)
                 .map(|_| sk.into()),
             _ => Err(Error::UnknownKemAlgorithm),
@@ -182,7 +209,7 @@ impl HpkeCrypto for HpkeRustCrypto {
     /// Returns an error if the KEM algorithm is not supported by this crypto provider.
     fn supports_kem(alg: KemAlgorithm) -> Result<(), Error> {
         match alg {
-            KemAlgorithm::DhKem25519 | KemAlgorithm::DhKemP256 => Ok(()),
+            KemAlgorithm::DhKem25519 | KemAlgorithm::DhKemP256 | KemAlgorithm::DhKemP384 => Ok(()),
             _ => Err(Error::UnknownKemAlgorithm),
         }
     }

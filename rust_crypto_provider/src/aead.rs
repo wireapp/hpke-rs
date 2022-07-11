@@ -1,14 +1,16 @@
 use aes_gcm::{Aes128Gcm as RC_Aes128Gcm, Aes256Gcm as RC_Aes256Gcm};
 use chacha20poly1305::{
-    aead::{Aead, KeyInit, Payload},
+    aead::{Aead, KeyInit, Payload as ChachaPayload},
     ChaCha20Poly1305 as RC_ChaCha20Poly1305,
 };
 use hpke_rs_crypto::{error::Error, types::AeadAlgorithm, HpkeCrypto};
 
+use aes_gcm::aead::Payload as AesPayload;
+
 use super::HpkeRustCrypto;
 
 macro_rules! implement_aead {
-    ($name_seal: ident, $name_open: ident, $name:ident, $algorithm:ident) => {
+    ($name_seal: ident, $name_open: ident, $name:ident, $algorithm:ident, $payload:ident) => {
         pub(crate) fn $name_seal(
             key: &[u8],
             nonce: &[u8],
@@ -21,7 +23,7 @@ macro_rules! implement_aead {
 
             let cipher = $algorithm::new(key.into());
             cipher
-                .encrypt(nonce.into(), Payload { msg, aad })
+                .encrypt(nonce.into(), $payload { msg, aad })
                 .map_err(|e| Error::CryptoLibraryError(format!("AEAD error: {:?}", e)))
         }
         pub(crate) fn $name_open(
@@ -43,17 +45,30 @@ macro_rules! implement_aead {
             let cipher = $algorithm::new(key.into());
 
             cipher
-                .decrypt(nonce.into(), Payload { msg, aad })
+                .decrypt(nonce.into(), $payload { msg, aad })
                 .map_err(|_| Error::AeadOpenError)
         }
     };
 }
 
-implement_aead!(aes128_seal, aes128_open, AesGcm128, RC_Aes128Gcm);
-implement_aead!(aes256_seal, aes256_open, AesGcm256, RC_Aes256Gcm);
+implement_aead!(
+    aes128_seal,
+    aes128_open,
+    AesGcm128,
+    RC_Aes128Gcm,
+    AesPayload
+);
+implement_aead!(
+    aes256_seal,
+    aes256_open,
+    AesGcm256,
+    RC_Aes256Gcm,
+    AesPayload
+);
 implement_aead!(
     chacha_seal,
     chacha_open,
     ChaCha20Poly1305,
-    RC_ChaCha20Poly1305
+    RC_ChaCha20Poly1305,
+    ChachaPayload
 );
