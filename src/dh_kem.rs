@@ -48,6 +48,44 @@ pub(super) fn key_gen<Crypto: HpkeCrypto>(
     Ok((sk, pk))
 }
 
+#[inline(always)]
+fn nist_pxxx_derive<Crypto: HpkeCrypto>(
+    alg: KemAlgorithm,
+    dkp_prk: &[u8],
+    suite_id: &[u8],
+    limit: usize,
+) -> Result<Vec<u8>, Error> {
+    let mut ctr = 0usize;
+    let key_spec = limit / u8::MAX as usize;
+    // Do rejection sampling trying to find a valid key.
+    // It is expected that there aren't too many iteration and that
+    // the loop will always terminate.
+    let sk = loop {
+        let ctr_bytes = &ctr.to_be_bytes()[..key_spec];
+        let candidate = labeled_expand::<Crypto>(
+            alg.into(),
+            &dkp_prk,
+            suite_id,
+            "candidate",
+            ctr_bytes,
+            alg.private_key_len(),
+        );
+        if let Ok(sk) = candidate {
+            if let Ok(sk) = Crypto::kem_validate_sk(alg, &sk) {
+                break sk;
+            }
+        }
+        if ctr == limit {
+            // If we get here we lost. This should never happen.
+            return Err(Error::CryptoLibraryError(format!(
+                "Unable to generate a valid NIST P-{key_spec} private key"
+            )));
+        }
+        ctr += 1;
+    };
+    Ok(sk)
+}
+
 pub(super) fn derive_key_pair<Crypto: HpkeCrypto>(
     alg: KemAlgorithm,
     suite_id: &[u8],
@@ -65,35 +103,11 @@ pub(super) fn derive_key_pair<Crypto: HpkeCrypto>(
             alg.private_key_len(),
         )?,
         KemAlgorithm::DhKemP256 => {
-            let mut ctr = 0u8;
-            // Do rejection sampling trying to find a valid key.
-            // It is expected that there aren't too many iteration and that
-            // the loop will always terminate.
-            loop {
-                let candidate = labeled_expand::<Crypto>(
-                    alg.into(),
-                    &dkp_prk,
-                    suite_id,
-                    "candidate",
-                    &ctr.to_be_bytes(),
-                    alg.private_key_len(),
-                );
-                if let Ok(sk) = &candidate {
-                    if let Ok(sk) = Crypto::kem_validate_sk(alg, sk) {
-                        break sk;
-                    }
-                }
-                if ctr == u8::MAX {
-                    // If we get here we lost. This should never happen.
-                    return Err(Error::CryptoLibraryError(
-                        "Unable to generate a valid P256 private key".to_string(),
-                    ));
-                }
-                ctr += 1;
-            }
+            nist_pxxx_derive::<Crypto>(alg, &dkp_prk, suite_id, u8::MAX as usize)?
         }
+        KemAlgorithm::DhKemP384 => nist_pxxx_derive::<Crypto>(alg, &dkp_prk, suite_id, 383)?,
         _ => {
-            panic!("This should be unreachable. Only x25519 and P256 KEMs are implemented")
+            panic!("This should be unreachable. Only x25519, P256 and P384 KEMs are implemented")
         }
     };
     Ok((Crypto::kem_derive_base(alg, &sk)?, sk))

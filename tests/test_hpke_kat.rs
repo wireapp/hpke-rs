@@ -67,9 +67,14 @@ fn kat<Crypto: HpkeCrypto + 'static>(tests: Vec<HpkeTestVector>, skip_aes: bool)
         let kdf_id: KdfAlgorithm = test.kdf_id.try_into().unwrap();
         let aead_id: AeadAlgorithm = test.aead_id.try_into().unwrap();
 
-        if kem_id != KemAlgorithm::DhKem25519 && kem_id != KemAlgorithm::DhKemP256 {
-            log::trace!(" > KEM {:?} not implemented yet", kem_id);
-            return;
+        match kem_id {
+            KemAlgorithm::DhKem25519 | KemAlgorithm::DhKemP256 => {},
+            // TODO: No test vectors are available for DHKEM(P-384) so we can't even start testing (???)
+            // KemAlgorithm::DhKemP384 => {},
+            _ => {
+                log::trace!(" > KEM {:?} not implemented yet", kem_id);
+                return;
+            }
         }
 
         if skip_aes && aead_id == AeadAlgorithm::Aes128Gcm || aead_id == AeadAlgorithm::Aes256Gcm {
