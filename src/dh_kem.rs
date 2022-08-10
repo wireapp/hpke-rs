@@ -53,37 +53,35 @@ fn nist_pxxx_derive<Crypto: HpkeCrypto>(
     alg: KemAlgorithm,
     dkp_prk: &[u8],
     suite_id: &[u8],
-    limit: usize,
 ) -> Result<Vec<u8>, Error> {
-    let mut ctr = 0usize;
-    let key_spec = limit / u8::MAX as usize;
+    let key_len = alg.private_key_len();
+    // Get the key length in bits (so that we know how many iterations we should make)
+    let key_len_bits = key_len * 8;
+    // Determine the info size from our key length
+    let slice_range = key_len_bits / u8::MAX as usize;
     // Do rejection sampling trying to find a valid key.
     // It is expected that there aren't too many iteration and that
     // the loop will always terminate.
-    let sk = loop {
-        let ctr_bytes = &ctr.to_be_bytes()[..key_spec];
+    for ctr in 0..key_len_bits {
+        let ctr_bytes = &ctr.to_le_bytes()[..slice_range];
         let candidate = labeled_expand::<Crypto>(
             alg.into(),
             &dkp_prk,
             suite_id,
             "candidate",
             ctr_bytes,
-            alg.private_key_len(),
-        );
+            key_len,
+        )
+        .and_then(|sk| Crypto::kem_validate_sk(alg, &sk));
+
         if let Ok(sk) = candidate {
-            if let Ok(sk) = Crypto::kem_validate_sk(alg, &sk) {
-                break sk;
-            }
+            return Ok(sk);
         }
-        if ctr == limit {
-            // If we get here we lost. This should never happen.
-            return Err(Error::CryptoLibraryError(format!(
-                "Unable to generate a valid NIST P-{key_spec} private key"
-            )));
-        }
-        ctr += 1;
-    };
-    Ok(sk)
+    }
+
+    Err(Error::CryptoLibraryError(format!(
+        "Unable to generate a valid NIST P-{key_len_bits} private key"
+    )))
 }
 
 pub(super) fn derive_key_pair<Crypto: HpkeCrypto>(
@@ -102,10 +100,8 @@ pub(super) fn derive_key_pair<Crypto: HpkeCrypto>(
             &[],
             alg.private_key_len(),
         )?,
-        KemAlgorithm::DhKemP256 => {
-            nist_pxxx_derive::<Crypto>(alg, &dkp_prk, suite_id, u8::MAX as usize)?
-        }
-        KemAlgorithm::DhKemP384 => nist_pxxx_derive::<Crypto>(alg, &dkp_prk, suite_id, 383)?,
+        KemAlgorithm::DhKemP256 => nist_pxxx_derive::<Crypto>(alg, &dkp_prk, suite_id)?,
+        KemAlgorithm::DhKemP384 => nist_pxxx_derive::<Crypto>(alg, &dkp_prk, suite_id)?,
         _ => {
             panic!("This should be unreachable. Only x25519, P256 and P384 KEMs are implemented")
         }
