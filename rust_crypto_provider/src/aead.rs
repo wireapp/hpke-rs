@@ -1,11 +1,9 @@
-use aes_gcm::{Aes128Gcm as RC_Aes128Gcm, Aes256Gcm as RC_Aes256Gcm};
+use aes_gcm::{Aes128Gcm as RC_Aes128Gcm, Aes256Gcm as RC_Aes256Gcm, aead::Payload as AesPayload};
 use chacha20poly1305::{
     aead::{Aead, KeyInit, Payload as ChachaPayload},
     ChaCha20Poly1305 as RC_ChaCha20Poly1305,
 };
 use hpke_rs_crypto::{error::Error, types::AeadAlgorithm, HpkeCrypto};
-
-use aes_gcm::aead::Payload as AesPayload;
 
 use super::HpkeRustCrypto;
 

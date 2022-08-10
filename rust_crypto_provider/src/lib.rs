@@ -2,15 +2,13 @@
 
 use std::sync::RwLock;
 
+use elliptic_curve::{ecdh::diffie_hellman, sec1::ToEncodedPoint};
 use hpke_rs_crypto::{
     error::Error,
     types::{AeadAlgorithm, KdfAlgorithm, KemAlgorithm},
     CryptoRng, HpkeCrypto, HpkeTestRng, RngCore,
 };
-use p256::{
-    elliptic_curve::{ecdh::diffie_hellman, sec1::ToEncodedPoint},
-    PublicKey as P256PublicKey, SecretKey as P256SecretKey,
-};
+use p256::{PublicKey as P256PublicKey, SecretKey as P256SecretKey};
 use p384::{PublicKey as P384PublicKey, SecretKey as P384SecretKey};
 use rand::SeedableRng;
 use x25519_dalek_ng::{PublicKey as X25519PublicKey, StaticSecret as X25519StaticSecret};
@@ -102,7 +100,6 @@ impl HpkeCrypto for HpkeRustCrypto {
                 if sk.len() != 32 {
                     return Err(Error::KemInvalidSecretKey);
                 }
-                assert!(sk.len() == 32);
                 let sk_array: [u8; 32] = sk.try_into().map_err(|_| Error::KemInvalidSecretKey)?;
                 let sk = X25519StaticSecret::from(sk_array);
                 Ok(X25519PublicKey::from(&sk).as_bytes().to_vec())
@@ -139,6 +136,13 @@ impl HpkeCrypto for HpkeRustCrypto {
 
     fn kem_validate_sk(alg: KemAlgorithm, sk: &[u8]) -> Result<Vec<u8>, Error> {
         match alg {
+            KemAlgorithm::DhKem25519 => {
+                if sk.len() != 32 {
+                    return Err(Error::KemInvalidSecretKey);
+                }
+
+                Ok(sk.into())
+            }
             KemAlgorithm::DhKemP256 => P256SecretKey::from_be_bytes(sk)
                 .map_err(|_| Error::KemInvalidSecretKey)
                 .map(|_| sk.into()),
