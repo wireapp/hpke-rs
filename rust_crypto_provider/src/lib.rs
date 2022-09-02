@@ -209,7 +209,7 @@ impl HpkeCrypto for HpkeRustCrypto {
     /// Returns an error if the KEM algorithm is not supported by this crypto provider.
     fn supports_kem(alg: KemAlgorithm) -> Result<(), Error> {
         match alg {
-            KemAlgorithm::DhKem25519 | KemAlgorithm::DhKemP256 | KemAlgorithm::DhKemP384 => Ok(()),
+            KemAlgorithm::DhKem25519 | KemAlgorithm::DhKemP256 | KemAlgorithm::DhKemP384 | KemAlgorithm::Kyber512 => Ok(()),
             _ => Err(Error::UnknownKemAlgorithm),
         }
     }

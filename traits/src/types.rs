@@ -24,6 +24,9 @@ pub enum KemAlgorithm {
 
     /// DH KEM on x448
     DhKem448 = 0x0021,
+
+    /// Kyber512
+    Kyber512 = 0x0080,
 }
 
 impl std::fmt::Display for KemAlgorithm {
@@ -41,6 +44,7 @@ impl std::convert::TryFrom<u16> for KemAlgorithm {
             0x0012 => Ok(KemAlgorithm::DhKemP521),
             0x0020 => Ok(KemAlgorithm::DhKem25519),
             0x0021 => Ok(KemAlgorithm::DhKem448),
+            0x0080 => Ok(KemAlgorithm::Kyber512),
             _ => Err(Self::Error::UnknownKemAlgorithm),
         }
     }
@@ -55,6 +59,7 @@ impl KemAlgorithm {
             KemAlgorithm::DhKemP521 => 66,
             KemAlgorithm::DhKem25519 => 32,
             KemAlgorithm::DhKem448 => 56,
+            KemAlgorithm::Kyber512 => 1632,
         }
     }
 
@@ -66,6 +71,7 @@ impl KemAlgorithm {
             KemAlgorithm::DhKemP521 => 64,
             KemAlgorithm::DhKem25519 => 32,
             KemAlgorithm::DhKem448 => 64,
+            KemAlgorithm::Kyber512 => 32,
         }
     }
 }
@@ -193,6 +199,7 @@ impl From<KemAlgorithm> for KdfAlgorithm {
             KemAlgorithm::DhKemP521 => KdfAlgorithm::HkdfSha512,
             KemAlgorithm::DhKem25519 => KdfAlgorithm::HkdfSha256,
             KemAlgorithm::DhKem448 => KdfAlgorithm::HkdfSha512,
+            KemAlgorithm::Kyber512 => KdfAlgorithm::HkdfSha256,
         }
     }
 }

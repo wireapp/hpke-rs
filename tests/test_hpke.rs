@@ -993,3 +993,11 @@ generate_test_case!(
     AeadAlgorithm::ChaCha20Poly1305,
     HpkeRustCrypto
 );
+generate_test_case!(
+    base_kyber512_hkdfsha256_Aes128Gcm,
+    HpkeMode::Base,
+    KemAlgorithm::Kyber512,
+    KdfAlgorithm::HkdfSha256,
+    AeadAlgorithm::Aes128Gcm,
+    HpkeRustCrypto
+);

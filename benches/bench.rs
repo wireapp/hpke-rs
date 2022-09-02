@@ -40,12 +40,13 @@ const KDF_IDS: [KdfAlgorithm; 3] = [
     KdfAlgorithm::HkdfSha384,
     KdfAlgorithm::HkdfSha512,
 ];
-const KEM_IDS: [KemAlgorithm; 5] = [
+const KEM_IDS: [KemAlgorithm; 6] = [
     KemAlgorithm::DhKemP256,
     KemAlgorithm::DhKemP384,
     KemAlgorithm::DhKemP521,
     KemAlgorithm::DhKem25519,
     KemAlgorithm::DhKem448,
+    KemAlgorithm::Kyber512,
 ];
 
 const AEAD_PAYLOAD: usize = 128;
@@ -67,12 +68,23 @@ fn benchmark<Crypto: HpkeCrypto + ProviderName + 'static>(c: &mut Criterion) {
                     }
                     let hpke = Hpke::<Crypto>::new(hpke_mode, kem_mode, kdf_mode, aead_mode);
                     let label = format!("{} {}", Crypto::name(), hpke);
-                    let kp = hpke.generate_key_pair().unwrap();
-                    let enc = kp.public_key().as_slice();
                     let kp_r = hpke.generate_key_pair().unwrap();
                     let sk_rm = kp_r.private_key();
                     let pk_rm = kp_r.public_key();
                     let info = hex_to_bytes("4f6465206f6e2061204772656369616e2055726e");
+                    let ciphtxt = hpke.setup_sender(
+                            &pk_rm,
+                            &info,
+                            None,
+                            None,
+                            None
+                         );
+                    if ciphtxt.is_err() {
+                        continue;
+                    }
+                    let unwrapped_ciphtxt = ciphtxt.unwrap();
+                    let enc = unwrapped_ciphtxt.0.as_ref();
+
                     let psk = if hpke_mode == HpkeMode::AuthPsk || hpke_mode == HpkeMode::Psk {
                         Some(hex_to_bytes(
                             "0247fd33b913760fa1fa51e1892d9f307fbe65eb171e8132c2af18555a738b82",

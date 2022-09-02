@@ -25,6 +25,7 @@ pub(crate) use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 mod dh_kem;
+mod pq_kem;
 pub(crate) mod kdf;
 mod kem;
 pub mod prelude;
