@@ -25,9 +25,9 @@ pub(crate) use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 mod dh_kem;
-mod pq_kem;
 pub(crate) mod kdf;
 mod kem;
+mod pq_kem;
 pub mod prelude;
 
 mod util;
@@ -392,9 +392,13 @@ impl<Crypto: HpkeCrypto> Hpke<Crypto> {
     ) -> Result<(EncapsulatedSecret, Context<Crypto>), HpkeError> {
         let randomness = self.random(self.kem_id.private_key_len())?;
         let (zz, enc) = match self.mode {
-            Mode::Base | Mode::Psk => {
-                kem::encaps::<Crypto>(self.kem_id, pk_r.value.as_slice(), &randomness)?
-            }
+            Mode::Base | Mode::Psk => match self.kem_id {
+                KemAlgorithm::Kyber512 => {
+                    let mut prng = self.prng.write().map_err(|_| HpkeError::LockPoisoned)?;
+                    kem::pq_encaps::<Crypto>(pk_r.value.as_slice(), &mut prng)?
+                }
+                _ => kem::encaps::<Crypto>(self.kem_id, pk_r.value.as_slice(), &randomness)?,
+            },
             Mode::Auth | Mode::AuthPsk => {
                 let sk_s = match sk_s {
                     Some(s) => &s.value,

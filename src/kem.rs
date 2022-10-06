@@ -24,11 +24,18 @@ pub(crate) fn encaps<Crypto: HpkeCrypto>(
         | KemAlgorithm::DhKem25519
         | KemAlgorithm::DhKem448 => {
             dh_kem::encaps::<Crypto>(alg, pk_r, &ciphersuite(alg), randomness)
-        },
-        KemAlgorithm::Kyber512 => {
-            pq_kem::encaps::<Crypto>(alg, pk_r)
         }
+        _ => Err(Error::CryptoLibraryError(
+            "Implementation error".to_string(),
+        )),
     }
+}
+
+pub(crate) fn pq_encaps<Crypto: HpkeCrypto>(
+    pk_r: &[u8],
+    prng: &mut Crypto::HpkePrng,
+) -> Result<(Vec<u8>, Vec<u8>), Error> {
+    pq_kem::encaps::<Crypto>(pk_r, prng)
 }
 
 pub(crate) fn decaps<Crypto: HpkeCrypto>(
@@ -42,7 +49,7 @@ pub(crate) fn decaps<Crypto: HpkeCrypto>(
         | KemAlgorithm::DhKemP521
         | KemAlgorithm::DhKem25519
         | KemAlgorithm::DhKem448 => dh_kem::decaps::<Crypto>(alg, enc, sk_r, &ciphersuite(alg)),
-        KemAlgorithm::Kyber512 => pq_kem::decaps::<Crypto>(alg, enc, sk_r),
+        KemAlgorithm::Kyber512 => pq_kem::decaps::<Crypto>(enc, sk_r),
     }
 }
 
@@ -59,8 +66,12 @@ pub(crate) fn auth_encaps<Crypto: HpkeCrypto>(
         | KemAlgorithm::DhKem25519
         | KemAlgorithm::DhKem448 => {
             dh_kem::auth_encaps::<Crypto>(alg, pk_r, sk_s, &ciphersuite(alg), randomness)
-        },
-        KemAlgorithm::Kyber512 => return Err(Error::CryptoLibraryError(format!("auth_encaps not supported by liboqs")))
+        }
+        KemAlgorithm::Kyber512 => {
+            return Err(Error::CryptoLibraryError(format!(
+                "auth_encaps not supported by liboqs"
+            )))
+        }
     }
 }
 
@@ -77,8 +88,12 @@ pub(crate) fn auth_decaps<Crypto: HpkeCrypto>(
         | KemAlgorithm::DhKem25519
         | KemAlgorithm::DhKem448 => {
             dh_kem::auth_decaps::<Crypto>(alg, enc, sk_r, pk_s, &ciphersuite(alg))
-        },
-        KemAlgorithm::Kyber512 => return Err(Error::CryptoLibraryError(format!("auth_decaps not supported by liboqs")))
+        }
+        KemAlgorithm::Kyber512 => {
+            return Err(Error::CryptoLibraryError(format!(
+                "auth_decaps not supported by liboqs"
+            )))
+        }
     }
 }
 
@@ -92,7 +107,7 @@ pub(crate) fn key_gen<Crypto: HpkeCrypto>(
         | KemAlgorithm::DhKemP521
         | KemAlgorithm::DhKem25519
         | KemAlgorithm::DhKem448 => dh_kem::key_gen::<Crypto>(alg, prng),
-        KemAlgorithm::Kyber512 => pq_kem::key_gen::<Crypto>(alg),
+        KemAlgorithm::Kyber512 => pq_kem::key_gen::<Crypto>(prng),
     }
 }
 

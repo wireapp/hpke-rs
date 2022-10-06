@@ -16,7 +16,21 @@ serde = { version = "1.0", features = ["derive"], optional = true }
 tls_codec = { version = "0.2.0", features = ["derive"], optional = true }
 zeroize = { version = "1.5", features = ["zeroize_derive"] }
 hpke-rs-crypto = { version = "0.1.2", path = "./traits" }
-oqs = { git = "https://github.com/tedeaton/liboqs-rust", branch = "kyber-derive-key", version = "0.7.2", default-features = false, features = ["kyber"] }
+
+pqc_kyber = { version = "0.3", features = ["kyber512", "KAT"] }
+rand = "0.8"
+
+[target.wasm32-unknown-unknown.dependencies]
+pqc_kyber = { version = "0.3", features = ["wasm", "KAT", "kyber512"] }
+#getrandom = { version = "0.2", features = ["js"] }
+
+#[dependencies.oqs]
+#path = "../liboqs-rust"
+#git = "https://github.com/beltram/liboqs-rust"
+#branch = "feat/pq"
+#version = "0.7.2"
+#default-features = false
+#features = ["kyber"]
 
 [features]
 default = []
@@ -45,3 +59,7 @@ harness = false
 [[bench]]
 name = "manual_benches"
 harness = false
+
+[patch.crates-io.pqc_kyber]
+git = "https://github.com/beltram/kyber"
+branch = "feat/pq"

@@ -1,115 +1,72 @@
-use hpke_rs_crypto::{error::Error, types::KemAlgorithm, HpkeCrypto};
 use crate::{
     kdf::{labeled_expand, labeled_extract},
     kem::*,
 };
-
-fn oqs_kem_name(alg:KemAlgorithm) -> Result<oqs::kem::Algorithm,Error> {
-    match alg {
-        KemAlgorithm::Kyber512 => Ok(oqs::kem::Algorithm::Kyber512),
-        _ => Err(Error::UnknownKemAlgorithm)
-    }
-}
-
-
+use hpke_rs_crypto::{error::Error, types::KemAlgorithm, HpkeCrypto};
 
 pub(super) fn key_gen<Crypto: HpkeCrypto>(
-    alg:KemAlgorithm,
+    prng: &mut Crypto::HpkePrng,
 ) -> Result<(Vec<u8>, Vec<u8>), Error> {
-
-    let kem_name = oqs_kem_name(alg)?;
-
-    let kemalg = match oqs::kem::Kem::new(kem_name) {
-        Ok(k) => k,
-        Err(_) => return Err(Error::CryptoLibraryError(format!("Failed to initialize liboqs KEM"))),
-    };
-
-    let (pk, sk) = match kemalg.keypair() {
-        Ok(keys) => keys,
-        Err(_) => return Err(Error::CryptoLibraryError(format!("liboqs key generation failed"))),
-    };
-    Ok((sk.into_vec(), pk.into_vec()))
+    let kp = pqc_kyber::keypair(prng);
+    println!("KEY GEN sk: {}, pk: {}", kp.secret.len(), kp.public.len());
+    Ok((kp.secret.to_vec(), kp.public.to_vec()))
 }
 
-
-
 pub(super) fn derive_key_pair<Crypto: HpkeCrypto>(
-    alg:KemAlgorithm,
+    alg: KemAlgorithm,
     suite_id: &[u8],
     ikm: &[u8],
 ) -> Result<(PublicKey, PrivateKey), Error> {
+    println!("KDF !!!");
 
-    let kem_name = oqs_kem_name(alg)?;
+    const SEED_SIZE: usize = 64;
+    const KYBER512_PK_SIZE: usize = 800;
+    const KYBER512_SK_SIZE: usize = 1632;
 
     // Turn the ikm into a standard 64 bytes
     let prk = labeled_extract::<Crypto>(alg.into(), &[], suite_id, "dkp_prk", &ikm);
-    let dpk_ikm = match labeled_expand::<Crypto>(alg.into(), &prk, suite_id, "dkp_ikm", &[], 64) {
-        Ok(k) => k,
-        Err(_) => return Err(Error::CryptoLibraryError(format!("Failed to derive initial key material"))),
-    };
+    let dpk_ikm = labeled_expand::<Crypto>(alg.into(), &prk, suite_id, "dkp_ikm", &[], SEED_SIZE)
+        .map_err(|e| {
+        Error::CryptoLibraryError(format!(
+            "Failed to derive initial key material because {e:?}"
+        ))
+    })?;
 
-
-    let kemalg = match oqs::kem::Kem::new(kem_name) {
-        Ok(k) => k,
-        Err(_) => return Err(Error::CryptoLibraryError(format!("Failed to initialize liboqs KEM"))),
-    };
-
-    let (pk, sk) = match kemalg.derive_keypair(&dpk_ikm) {
-        Ok(keys) => keys,
-        Err(_) => return Err(Error::CryptoLibraryError(format!("liboqs deriving keypair failed"))),
-    };
-    Ok((pk.into_vec(), sk.into_vec()))
+    // TODO: wrongly implemented
+    let mut pk = [0u8; KYBER512_PK_SIZE];
+    pqc_kyber::kdf(&mut pk, &dpk_ikm[..], KYBER512_PK_SIZE);
+    let mut sk = [0u8; KYBER512_SK_SIZE];
+    pqc_kyber::kdf(&mut sk, &dpk_ikm[..], KYBER512_SK_SIZE);
+    Ok((pk.to_vec(), sk.to_vec()))
 }
 
 pub(super) fn encaps<Crypto: HpkeCrypto>(
-    alg:KemAlgorithm,
     pk_r: &[u8],
+    prng: &mut Crypto::HpkePrng,
 ) -> Result<(Vec<u8>, Vec<u8>), Error> {
-    let kem_name = oqs_kem_name(alg)?;
-    let kemalg = match oqs::kem::Kem::new(kem_name) {
-        Ok(k) => k,
-        Err(_) => return Err(Error::CryptoLibraryError(format!("Failed to initialize liboqs KEM"))),
-    };
-
-    let pubkey = match kemalg.public_key_from_bytes(pk_r) {
-        Some(pk) => pk,
-        None => return Err(Error::CryptoLibraryError(format!("Failed to build public key from bytes"))),
-    };
-
-    let (kem_ct, kem_ss) = match kemalg.encapsulate(&pubkey) {
-        Ok(r) => r,
-        Err(_) => return Err(Error::CryptoLibraryError(format!("Failed to run liboqs encapsulate"))),
-    };
-
-    Ok((kem_ss.into_vec(), kem_ct.into_vec()))
-
+    let (ct, ss) = pqc_kyber::encapsulate(pk_r, prng).map_err(|e| {
+        Error::CryptoLibraryError(format!("Failed KEM encapsulation because {e:?}"))
+    })?;
+    println!(
+        "ENCAPSULATE !!! pk: {} (expected {}), ct: {}, ss: {}",
+        pk_r.len(),
+        pqc_kyber::KYBER_PUBLICKEYBYTES,
+        ct.len(),
+        ss.len()
+    );
+    Ok((ss.to_vec(), ct.to_vec()))
 }
 
-pub(super) fn decaps<Crypto: HpkeCrypto>(
-    alg: KemAlgorithm,
-    enc: &[u8],
-    sk_r: &[u8],
-) -> Result<Vec<u8>, Error> {
-    let kem_name = oqs_kem_name(alg)?;
-    let kemalg = match oqs::kem::Kem::new(kem_name) {
-        Ok(k) => k,
-        Err(_) => return Err(Error::CryptoLibraryError(format!("Failed to initialize liboqs KEM"))),
-    };
+pub(super) fn decaps<Crypto: HpkeCrypto>(ct: &[u8], sk_r: &[u8]) -> Result<Vec<u8>, Error> {
+    println!(
+        "DECAPSULATE ct: {} (expected {}), sk: {} (expected {})",
+        ct.len(),
+        pqc_kyber::KYBER_CIPHERTEXTBYTES,
+        sk_r.len(),
+        pqc_kyber::KYBER_SECRETKEYBYTES
+    );
+    let kem_ss = pqc_kyber::decapsulate(ct, sk_r)
+        .map_err(|e| Error::CryptoLibraryError(format!("Failed KEM decapsulate because {e:?}")))?;
 
-    let seckey = match kemalg.secret_key_from_bytes(sk_r) {
-        Some(sk) => sk,
-        None => return Err(Error::CryptoLibraryError(format!("Failed to build secret key from bytes"))),
-    };
-
-    let ctxt = match kemalg.ciphertext_from_bytes(enc) {
-        Some(ct) => ct,
-        None => return Err(Error::CryptoLibraryError(format!("Failed to build ciphertext from bytes"))),
-    };
-
-    let kem_ss = match kemalg.decapsulate(&seckey, &ctxt) {
-        Ok(ss) => ss,
-        Err(_) => return Err(Error::CryptoLibraryError(format!("Failed to run liboqs decapsulate"))),
-    };
-
-    Ok(kem_ss.into_vec())
+    Ok(kem_ss.to_vec())
 }
