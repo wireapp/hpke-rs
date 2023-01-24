@@ -1,6 +1,3 @@
-extern crate hpke_rs as hpke;
-
-use hpke_rs_evercrypt::HpkeEvercrypt;
 use hpke_rs_rust_crypto::HpkeRustCrypto;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use serde::{self, Deserialize, Serialize};
@@ -9,8 +6,8 @@ use std::fs::File;
 use std::io::BufReader;
 use std::time::Instant;
 
-use hpke::prelude::*;
-use hpke::test_util::{hex_to_bytes, hex_to_bytes_option, vec_to_option_slice};
+use hpke_rs::prelude::*;
+use hpke_rs::test_util::{hex_to_bytes, hex_to_bytes_option, vec_to_option_slice};
 use hpke_rs_crypto::{types::*, HpkeCrypto};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -275,18 +272,13 @@ fn test_kat() {
     kat::<HpkeRustCrypto>(tests.clone());
     let time = now.elapsed();
     log::info!("Test vectors with Rust Crypto took: {}s", time.as_secs());
-
-    let now = Instant::now();
-    kat::<HpkeEvercrypt>(tests);
-    let time = now.elapsed();
-    log::info!("Test vectors with Evercrypt took: {}s", time.as_secs());
 }
 
 #[cfg(feature = "serialization")]
 #[cfg(feature = "hazmat")]
 #[test]
 fn test_serialization() {
-    use hpke::HpkeKeyPair;
+    use hpke_rs::HpkeKeyPair;
 
     // XXX: Make these individual tests.
     for mode in 0u8..4 {

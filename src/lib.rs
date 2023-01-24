@@ -20,8 +20,6 @@ use hpke_rs_crypto::{
     HpkeCrypto,
 };
 use prelude::kdf::{labeled_expand, labeled_extract};
-#[cfg(feature = "serialization")]
-pub(crate) use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 mod dh_kem;
@@ -84,48 +82,33 @@ pub enum HpkeError {
     LockPoisoned,
 }
 
-#[deprecated(
-    since = "0.0.7",
-    note = "Please use HpkePublicKey instead. This alias will be removed with the first stable  0.1 release."
-)]
-#[allow(clippy::upper_case_acronyms)]
-#[allow(missing_docs)]
-pub type HPKEPublicKey = HpkePublicKey;
-
 /// An HPKE public key is a byte vector.
 #[derive(Debug, PartialEq, Clone, Default)]
-#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serialization",
+    derive(serde::Serialize, serde::Deserialize)
+)]
 pub struct HpkePublicKey {
     value: Vec<u8>,
 }
 
-#[deprecated(
-    since = "0.0.7",
-    note = "Please use HpkePrivateKey instead. This alias will be removed with the first stable  0.1 release."
-)]
-#[allow(clippy::upper_case_acronyms)]
-#[allow(missing_docs)]
-pub type HPKEPrivateKey = HpkePrivateKey;
-
 /// An HPKE private key is a byte vector.
 #[derive(Default, Zeroize, ZeroizeOnDrop)]
-#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serialization",
+    derive(serde::Serialize, serde::Deserialize)
+)]
 #[cfg_attr(feature = "hazmat", derive(Clone))]
 pub struct HpkePrivateKey {
     value: Vec<u8>,
 }
 
-#[deprecated(
-    since = "0.0.7",
-    note = "Please use HpkeKeyPair instead. This alias will be removed with the first stable  0.1 release."
-)]
-#[allow(clippy::upper_case_acronyms)]
-#[allow(missing_docs)]
-pub type HPKEKeyPair = HpkeKeyPair;
-
 /// An HPKE key pair has an HPKE private and public key.
 #[derive(Debug, Default)]
-#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serialization",
+    derive(serde::Serialize, serde::Deserialize)
+)]
 #[cfg_attr(feature = "hazmat", derive(Clone))]
 pub struct HpkeKeyPair {
     private_key: HpkePrivateKey,
@@ -134,7 +117,10 @@ pub struct HpkeKeyPair {
 
 /// HPKE supports four modes.
 #[derive(PartialEq, Copy, Clone, Debug)]
-#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serialization",
+    derive(serde::Serialize, serde::Deserialize)
+)]
 #[repr(u8)]
 pub enum Mode {
     /// HPKE Base mode.
