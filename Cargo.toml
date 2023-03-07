@@ -34,7 +34,7 @@ hpke-test-prng = [] # ⚠️ Enable testing PRNG - DO NOT USE
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 lazy_static = "1.4"
-rayon = "1.5"
+rayon = "1.6"
 hpke-rs = { path = ".", features = ["hpke-test", "hazmat"] }
 hpke-rs-rust-crypto = { version = "0.2", path = "./rust_crypto_provider", features = ["deterministic-prng"] }
 rand = { version = "0.8", features = ["getrandom"] }

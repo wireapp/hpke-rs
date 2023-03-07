@@ -76,7 +76,7 @@ impl HpkeCrypto for HpkeRustCrypto {
             }
             KemAlgorithm::DhKemP256 => {
                 let sk =
-                    P256SecretKey::from_be_bytes(sk).map_err(|_| Error::KemInvalidSecretKey)?;
+                    P256SecretKey::from_bytes(sk.into()).map_err(|_| Error::KemInvalidSecretKey)?;
                 let pk =
                     P256PublicKey::from_sec1_bytes(pk).map_err(|_| Error::KemInvalidPublicKey)?;
                 Ok(diffie_hellman(sk.to_nonzero_scalar(), pk.as_affine())
@@ -86,7 +86,7 @@ impl HpkeCrypto for HpkeRustCrypto {
             }
             KemAlgorithm::DhKemP384 => {
                 let sk =
-                    P384SecretKey::from_be_bytes(sk).map_err(|_| Error::KemInvalidSecretKey)?;
+                    P384SecretKey::from_bytes(sk.into()).map_err(|_| Error::KemInvalidSecretKey)?;
                 let pk =
                     P384PublicKey::from_sec1_bytes(pk).map_err(|_| Error::KemInvalidPublicKey)?;
                 Ok(diffie_hellman(sk.to_nonzero_scalar(), pk.as_affine())
@@ -110,12 +110,12 @@ impl HpkeCrypto for HpkeRustCrypto {
             }
             KemAlgorithm::DhKemP256 => {
                 let sk =
-                    P256SecretKey::from_be_bytes(sk).map_err(|_| Error::KemInvalidSecretKey)?;
+                    P256SecretKey::from_bytes(sk.into()).map_err(|_| Error::KemInvalidSecretKey)?;
                 Ok(sk.public_key().to_encoded_point(false).as_bytes().into())
             }
             KemAlgorithm::DhKemP384 => {
                 let sk =
-                    P384SecretKey::from_be_bytes(sk).map_err(|_| Error::KemInvalidSecretKey)?;
+                    P384SecretKey::from_bytes(sk.into()).map_err(|_| Error::KemInvalidSecretKey)?;
                 Ok(sk.public_key().to_encoded_point(false).as_bytes().into())
             }
             _ => Err(Error::UnknownKemAlgorithm),
@@ -127,11 +127,11 @@ impl HpkeCrypto for HpkeRustCrypto {
         match alg {
             KemAlgorithm::DhKem25519 => Ok(X25519StaticSecret::new(&mut *rng).to_bytes().to_vec()),
             KemAlgorithm::DhKemP256 => Ok(P256SecretKey::random(&mut *rng)
-                .to_be_bytes()
+                .to_bytes()
                 .as_slice()
                 .into()),
             KemAlgorithm::DhKemP384 => Ok(P384SecretKey::random(&mut *rng)
-                .to_be_bytes()
+                .to_bytes()
                 .as_slice()
                 .into()),
             _ => Err(Error::UnknownKemAlgorithm),
@@ -147,10 +147,10 @@ impl HpkeCrypto for HpkeRustCrypto {
 
                 Ok(sk.into())
             }
-            KemAlgorithm::DhKemP256 => P256SecretKey::from_be_bytes(sk)
+            KemAlgorithm::DhKemP256 => P256SecretKey::from_bytes(sk.into())
                 .map_err(|_| Error::KemInvalidSecretKey)
                 .map(|_| sk.into()),
-            KemAlgorithm::DhKemP384 => P384SecretKey::from_be_bytes(sk)
+            KemAlgorithm::DhKemP384 => P384SecretKey::from_bytes(sk.into())
                 .map_err(|_| Error::KemInvalidSecretKey)
                 .map(|_| sk.into()),
             _ => Err(Error::UnknownKemAlgorithm),

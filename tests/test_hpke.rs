@@ -335,7 +335,7 @@ generate_test_case!(
     HpkeRustCrypto
 );
 generate_test_case!(
-    psk_dhkemp2384hkdfsha256_Aes128Gcm,
+    psk_dhkemp384hkdfsha256_Aes128Gcm,
     HpkeMode::Psk,
     KemAlgorithm::DhKemP384,
     KdfAlgorithm::HkdfSha256,
@@ -359,7 +359,7 @@ generate_test_case!(
     HpkeRustCrypto
 );
 generate_test_case!(
-    psk_dhkemp2384hkdfsha384_Aes128Gcm,
+    psk_dhkemp384hkdfsha384_Aes128Gcm,
     HpkeMode::Psk,
     KemAlgorithm::DhKemP384,
     KdfAlgorithm::HkdfSha384,
@@ -383,7 +383,7 @@ generate_test_case!(
     HpkeRustCrypto
 );
 generate_test_case!(
-    psk_dhkemp2384hkdfsha512_Aes128Gcm,
+    psk_dhkemp384hkdfsha512_Aes128Gcm,
     HpkeMode::Psk,
     KemAlgorithm::DhKemP384,
     KdfAlgorithm::HkdfSha512,
@@ -407,7 +407,7 @@ generate_test_case!(
     HpkeRustCrypto
 );
 generate_test_case!(
-    psk_dhkemp2384hkdfsha256_Aes256Gcm,
+    psk_dhkemp384hkdfsha256_Aes256Gcm,
     HpkeMode::Psk,
     KemAlgorithm::DhKemP384,
     KdfAlgorithm::HkdfSha256,
@@ -431,7 +431,7 @@ generate_test_case!(
     HpkeRustCrypto
 );
 generate_test_case!(
-    psk_dhkemp2384hkdfsha384_Aes256Gcm,
+    psk_dhkemp384hkdfsha384_Aes256Gcm,
     HpkeMode::Psk,
     KemAlgorithm::DhKemP384,
     KdfAlgorithm::HkdfSha384,
@@ -455,7 +455,7 @@ generate_test_case!(
     HpkeRustCrypto
 );
 generate_test_case!(
-    psk_dhkemp2384hkdfsha512_Aes256Gcm,
+    psk_dhkemp384hkdfsha512_Aes256Gcm,
     HpkeMode::Psk,
     KemAlgorithm::DhKemP384,
     KdfAlgorithm::HkdfSha512,
@@ -479,7 +479,7 @@ generate_test_case!(
     HpkeRustCrypto
 );
 generate_test_case!(
-    psk_dhkemp2384hkdfsha256_chacha20poly1305,
+    psk_dhkemp384hkdfsha256_chacha20poly1305,
     HpkeMode::Psk,
     KemAlgorithm::DhKemP384,
     KdfAlgorithm::HkdfSha256,
@@ -503,7 +503,7 @@ generate_test_case!(
     HpkeRustCrypto
 );
 generate_test_case!(
-    psk_dhkemp2384hkdfsha384_chacha20poly1305,
+    psk_dhkemp384hkdfsha384_chacha20poly1305,
     HpkeMode::Psk,
     KemAlgorithm::DhKemP384,
     KdfAlgorithm::HkdfSha384,
@@ -527,7 +527,7 @@ generate_test_case!(
     HpkeRustCrypto
 );
 generate_test_case!(
-    psk_dhkemp2384hkdfsha512_chacha20poly1305,
+    psk_dhkemp384hkdfsha512_chacha20poly1305,
     HpkeMode::Psk,
     KemAlgorithm::DhKemP384,
     KdfAlgorithm::HkdfSha512,
